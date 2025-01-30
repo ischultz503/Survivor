@@ -33,7 +33,9 @@ def filter_efficiency_tiers(df):
 
 def pivot_tab():
     # Load and filter data
-    data_file = "c:/users/isaacschultz/documents/litapp/full consumption.pkl"
+    data_file = os.path.join(os.path.dirname(__file__), "full consumption.pkl")
+
+    #data_file = "c:/users/isaacschultz/documents/litapp/full consumption.pkl"
     df = load_data(data_file)
     df = filter_efficiency_tiers(df)
 

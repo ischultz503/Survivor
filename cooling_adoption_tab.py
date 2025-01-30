@@ -14,7 +14,9 @@ def load_data(file_path):
 
 def cooling_adoption_tab():
     # File path for your data
-    data_file = "c:/users/isaacschultz/documents/litapp/cooling_adoption.pkl"
+    data_file = os.path.join(os.path.dirname(__file__), "cooling_adoption.pkl")
+
+   # data_file = "c:/users/isaacschultz/documents/litapp/cooling_adoption.pkl"
     df = load_data(data_file)
 
     st.header("Cooling Adoption over Time")

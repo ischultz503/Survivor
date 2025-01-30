@@ -14,7 +14,7 @@ def load_data(file_path):
 
 def energy_consumption_tab():
     # File path for your data
-    data_file = "c:/users/isaacschultz/documents/litapp/full consumption.pkl"
+    data_file = os.path.join(os.path.dirname(__file__), "full consumption.pkl")
     df = load_data(data_file)
     
     st.header("Energy Consumption by Year and Scenario")
