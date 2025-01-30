@@ -7,6 +7,7 @@ Created on Wed Jan  8 12:58:34 2025
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 # Create checkboxes for 'Scenario'
 
 def load_data(file_path):

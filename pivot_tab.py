@@ -6,6 +6,7 @@ Created on Mon Jan 13 15:16:52 2025
 """
 import streamlit as st
 import pandas as pd
+import os
 
 def load_data(file_path):
     """Load data from a pickle file and pre-process it."""

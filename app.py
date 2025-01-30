@@ -5,6 +5,7 @@ from energy_tab import energy_consumption_tab
 from saturations_tab import saturations_tab
 from cooling_adoption_tab import cooling_adoption_tab
 from pivot_tab import pivot_tab
+import os
 
 # Sidebar Information
 st.sidebar.header("About This App")

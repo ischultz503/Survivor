@@ -7,6 +7,7 @@ Created on Mon Jan 13 11:58:32 2025
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 
 def load_data(file_path):
     """Load data from a pickle file."""
