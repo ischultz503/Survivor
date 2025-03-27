@@ -30,15 +30,18 @@ def trends_tab():
         return df.fillna(0)
 
     def apply_point_values(raw_scores, point_values):
-        raw_scores = clean_data(raw_scores.copy())
+        raw_scores = raw_scores.copy()
         point_values = point_values.copy()
-        point_values["Event"] = point_values["Event"].str.replace(" ", "_")
-
+    
+        # Don't rename anything — match original column names exactly
+        raw_scores = raw_scores.fillna(0)
+        point_values["Event"] = point_values["Event"].str.strip()
+        raw_scores.columns = raw_scores.columns.str.strip()
         for _, row in point_values.iterrows():
             event = row["Event"]
             if event in raw_scores.columns:
                 raw_scores[event] *= row["Points"]
-
+    
         event_cols = [col for col in point_values["Event"] if col in raw_scores.columns]
         raw_scores["total"] = raw_scores[event_cols].sum(axis=1)
         return raw_scores, event_cols
@@ -97,7 +100,7 @@ def trends_tab():
     long_scores = score_detail.melt(id_vars=["Player", "Week"], var_name="Event", value_name="Points")
 
     # Filter for actual scoring events
-    long_scores = long_scores[long_scores["Points"] > 0]
+    long_scores = long_scores[long_scores["Points"] != 0]
 
     # Clean and sort
     long_scores["Event"] = long_scores["Event"].str.replace("_", " ").str.title()

@@ -46,7 +46,7 @@ def weekly_tab():
     st.plotly_chart(fig, use_container_width=True)
 
     # --- Raw bonus table with totals ---
-    st.subheader("Raw Bonus Points Table")
+    st.subheader("Bonus Points Table")
 
     df_display = df.copy()
     df_display["Week"] = df_display["Week"].astype(str)
