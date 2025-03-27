@@ -46,7 +46,7 @@ def weekly_tab():
     st.plotly_chart(fig, use_container_width=True)
 
     # --- Raw bonus table with totals ---
-    st.subheader("Raw Bonus Points Table")
+    st.subheader("Weekly Bonus Points")
 
     df_display = df.copy()
     df_display["Week"] = df_display["Week"].astype(str)
@@ -101,7 +101,7 @@ def weekly_tab():
     st.table(styled)
 
     # --- Overall Accuracy Chart (Single Bar per Team) ---
-    st.subheader("Overall Team Accuracy")
+    st.subheader("Overall Team Weekly Questions Accuracy")
 
     valid_df = qa_df[qa_df["Is Voided"] == False].copy()
     team_accuracy = (
