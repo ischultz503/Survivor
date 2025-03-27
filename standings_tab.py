@@ -45,11 +45,16 @@ def standings_tab():
 
     def load_data():
         raw_scores = pd.read_excel(scores_file_path, sheet_name="PointsScored_Survivor")
+        bonus_scores = pd.read_excel(scores_file_path, sheet_name="Weekly_Pick_Scores")
+        bonus_scores = bonus_scores.drop(columns=["Week"])
+        bonus_scores.columns = bonus_scores.columns.str.strip()  # Also ensure no whitespace
         point_values = pd.read_csv("data/PointValues_Survivor.csv")
         player_images = pd.read_csv(images_path)
-        return raw_scores, point_values, player_images
+        return raw_scores, bonus_scores, point_values, player_images
 
-    raw_scores, point_values, player_images = load_data()
+
+    raw_scores, bonus_scores, point_values, player_images = load_data()
+
 
     # --- Roster definitions ---
     def get_all_rosters(season):
@@ -102,13 +107,16 @@ def standings_tab():
         scoreboard["rolling_total"] = scoreboard.groupby("Player")["total"].cumsum()
         return scoreboard
 
-    def get_team_totals(scoreboard, roster_df):
+    def get_team_totals(scoreboard, roster_df, bonus_scores):
         player_totals = scoreboard.groupby("Player")["total"].sum()
         team_totals = {}
         for team in roster_df.columns:
             players = roster_df[team].dropna()
-            team_totals[team] = player_totals.get(players, 0).sum()
+            player_total = player_totals.loc[players].sum()
+            bonus_total = bonus_scores[team].sum() if team in bonus_scores.columns else 0
+            team_totals[team] = player_total + bonus_total
         return pd.DataFrame.from_dict(team_totals, orient='index', columns=["Total Points"]).sort_values("Total Points", ascending=False)
+
 
     def get_team_scores_by_week(scoreboard, roster_df):
         weeks = sorted(scoreboard["Week"].unique())
@@ -129,14 +137,15 @@ def standings_tab():
     scored, _ = apply_point_values(raw_scores, point_values)
 
     scoreboard = get_scoreboard(scored)
-    standings_df = get_team_totals(scoreboard, roster_df)
+    standings_df = get_team_totals(scoreboard, roster_df, bonus_scores)
+
 #####################################################################################
     # --- Line Chart: Team Scores by Week ---
     # --- Team Scores Chart Options ---
     chart_type = st.radio("Show Team Scores as:", ["Cumulative Line Chart", "Weekly Bar Chart"])
     
     # --- Cumulative Line Chart ---
-    def get_cumulative_team_scores(scoreboard, roster_df):
+    def get_cumulative_team_scores(scoreboard, roster_df, bonus_scores):
         weeks = sorted(scoreboard["Week"].unique())
         team_data = { "Week": weeks }
     
@@ -145,14 +154,24 @@ def standings_tab():
             for w in weeks:
                 week_df = scoreboard[scoreboard["Week"] == w]
                 players = roster_df[team].dropna()
-                total = week_df[week_df["Player"].isin(players)]["total"].sum()
-                team_week_scores.append(total)
+                player_total = week_df[week_df["Player"].isin(players)]["total"].sum()
+                
+                # Grab bonus for that week
+                bonus = 0
+                if team in bonus_scores.columns:
+                    try:
+                        bonus = bonus_scores.iloc[w - 1][team]
+                    except Exception:
+                        pass  # In case week index mismatch
+    
+                team_week_scores.append(player_total + bonus)
+    
             team_data[team] = pd.Series(team_week_scores).cumsum()
     
         return pd.DataFrame(team_data)
     
     # --- Weekly (Non-Cumulative) Scores ---
-    def get_weekly_team_scores(scoreboard, roster_df):
+    def get_weekly_team_scores(scoreboard, roster_df, bonus_scores):
         weeks = sorted(scoreboard["Week"].unique())
         team_data = { "Week": weeks }
     
@@ -161,15 +180,25 @@ def standings_tab():
             for w in weeks:
                 week_df = scoreboard[scoreboard["Week"] == w]
                 players = roster_df[team].dropna()
-                total = week_df[week_df["Player"].isin(players)]["total"].sum()
-                team_week_scores.append(total)
+                player_total = week_df[week_df["Player"].isin(players)]["total"].sum()
+    
+                # Grab bonus for that week
+                bonus = 0
+                if team in bonus_scores.columns:
+                    try:
+                        bonus = bonus_scores.iloc[w - 1][team]
+                    except Exception:
+                        pass
+    
+                team_week_scores.append(player_total + bonus)
+    
             team_data[team] = team_week_scores
     
         return pd.DataFrame(team_data)
     
     if chart_type == "Cumulative Line Chart":
         st.subheader("Team Scores by Week (Cumulative)")
-        team_week_df = get_cumulative_team_scores(scoreboard, roster_df)
+        team_week_df = get_cumulative_team_scores(scoreboard, roster_df, bonus_scores)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.line(team_long, x="Week", y="Score", color="Team", markers=True)
         fig.update_layout(height=400)
@@ -177,7 +206,7 @@ def standings_tab():
     
     elif chart_type == "Weekly Bar Chart":
         st.subheader("Team Scores by Week (Non-Cumulative)")
-        team_week_df = get_weekly_team_scores(scoreboard, roster_df)
+        team_week_df = get_weekly_team_scores(scoreboard, roster_df, bonus_scores)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.bar(team_long, x="Week", y="Score", color="Team", text="Score")
         fig.update_layout(barmode="group", height=450, xaxis=dict(type='category'))
