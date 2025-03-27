@@ -9,8 +9,7 @@ from player_trends import trends_tab
 # Sidebar
 st.sidebar.header("Fantasy Survivor")
 st.sidebar.markdown("""
-Pick your **season** and **league** to see standings, rosters, individual player performance, answers
-to weekly questions and more.
+Pick your **season** and **league** to see stats, trends, and team performance.
 """)
 
 season = st.sidebar.selectbox("Season", ["Season 48",'Season 47'])
