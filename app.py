@@ -1,38 +1,38 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-from energy_tab import energy_consumption_tab
-from saturations_tab import saturations_tab
-from cooling_adoption_tab import cooling_adoption_tab
-from pivot_tab import pivot_tab
-import os
+from rules_tab import rules_tab
+from standings_tab import standings_tab
+from weekly_tab import weekly_tab
+from elimination_tab import eliminations_tab
+from player_trends import trends_tab
 
-# Sidebar Information
-st.sidebar.header("About This App")
-st.sidebar.write("""
-This app explores equipment saturations for residential HVAC systems.
-- Navigate between tabs to view data visualizations and tables.
-- Filters are specific to each tab for better control.
+
+# Sidebar
+st.sidebar.header("Fantasy Survivor")
+st.sidebar.markdown("""
+Pick your **season** and **league** to see stats, trends, and team performance.
 """)
 
-st.sidebar.subheader("Key Definitions")
-st.sidebar.write("""
-**Cooling**: Includes central air conditioners, heat pumps, and other cooling systems.  
-**Heating**: Includes furnaces, and heat pumps and other heating technologies.  
-**Scenarios**:  
-- Baseline: Represents the current state.  
-- Program: Represents a hypothetical program implementation.
-""")
+season = st.sidebar.selectbox("Season", ["Season 48",'Season 47'])
+league = st.sidebar.selectbox("League", ["NE Portland"])
+st.session_state["season"] = season
+st.session_state["league"] = league
 
 # Create tabs for different sections
-tab1, tab2 , tab3 , tab4 = st.tabs(["Energy Consumption", "Equipment Saturations","Cooling Adoption",'Pivot Table'])
+tab1, tab2 , tab3 , tab4, tab5 = st.tabs(["Scoring System",
+                                    "Standings & Rosters",
+                                    'Weekly Question Scores',
+                                    'Individual Player Data',
+                                    'Elminiations by Week'])
+
 
 with tab1:
-    energy_consumption_tab()
+    rules_tab()
 with tab2:
-    saturations_tab()
+    standings_tab()
 with tab3:
-    cooling_adoption_tab()
+    weekly_tab()
 with tab4:
-    pivot_tab()
+    trends_tab()
+with tab5:
+    eliminations_tab()
 
