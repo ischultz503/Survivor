@@ -23,6 +23,7 @@ Wins 2nd individual immunity challenge,15
 Wins 3rd individual immunity challenge,10
 Wins final individual immunity challenge,5
 Wins other individual immunity challenge,7
+Wins Mergatory Individual Immunity Challenge,12
 Gives immunity (either idol or individual mmunity necklace) away,3
 Plays idol and person it is played for gets zero votes (including self),-5
 Advances after being involved in tie at tribal on revote,5
@@ -40,3 +41,6 @@ Plays shot in the dark succesfully,8
 Plays shot in the dark unsuccesfully,-3
 Plays idol at tribal,4
 "Plays advantage (extra vote, steal vote etc.)",3
+Text Effects,0.5
+Complaining,-0.2
+Autism Awareness Warrior,0.6

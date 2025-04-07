@@ -110,6 +110,6 @@ def trends_tab():
     st.dataframe(
         long_scores.style
             .bar(subset=["Points"], color='#85C1E9')
-            .format({"Points": "{:.0f}"}),
+            .format({"Points": "{:.1f}"}),
         use_container_width=True
     )

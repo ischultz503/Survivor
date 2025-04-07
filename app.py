@@ -22,7 +22,7 @@ tab1, tab2 , tab3 , tab4, tab5 = st.tabs(["Scoring System",
                                     "Standings & Rosters",
                                     'Weekly Question Scores',
                                     'Individual Player Data',
-                                    'Elminiations by Week'])
+                                    'Eliminations by Week'])
 
 
 with tab1:

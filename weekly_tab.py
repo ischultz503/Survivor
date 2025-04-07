@@ -13,7 +13,6 @@ def weekly_tab():
     season = st.session_state["season"]
 
     # --- Load bonus points ---
-    @st.cache_data
     def load_weekly_picks():
         if season == 'Season 47':
             return pd.read_excel("data/PointsScored_Survivor_47.xlsx", sheet_name="Weekly_Pick_Scores")
@@ -21,13 +20,16 @@ def weekly_tab():
             return pd.read_excel("data/PointsScored_Survivor_48.xlsx", sheet_name="Weekly_Pick_Scores")
 
     df = load_weekly_picks()
+    df = df.fillna(0)  # 👈 convert any missing values to 0
+    df["Week"] = df["Week"].astype(str)  # 👈 make Week a string so it's consistent
 
     st.markdown("These are bonus points awarded to teams each week based on prediction questions or other bonuses.")
 
     # --- Toggle for bonus chart view ---
     view_type = st.radio("Bonus Chart View", ["Weekly", "Cumulative"], horizontal=True)
     st.subheader(f"{view_type} Bonus Points by Team")
-
+    
+    df["Week"] = df["Week"].astype(str)
     df_long = df.melt(id_vars="Week", var_name="Team", value_name="Bonus Points")
     df_long["Week"] = df_long["Week"].astype(str)
 
@@ -49,6 +51,7 @@ def weekly_tab():
     st.subheader("Bonus Points Table")
 
     df_display = df.copy()
+    df_display = df_display.fillna(0)  # 👈 again just to be safe
     df_display["Week"] = df_display["Week"].astype(str)
     totals = df_display.drop(columns="Week").sum().to_frame().T
     totals["Week"] = "Total"

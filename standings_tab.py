@@ -215,7 +215,7 @@ def standings_tab():
 ####################################################################################
     # --- Standings Table ---
     st.subheader("Team Standings")
-    st.dataframe(standings_df.style.format("{:.0f}"))
+    st.dataframe(standings_df.style.format("{:.1f}"))
 
     # --- Team Rosters with Images ---
     st.subheader("Team Rosters")
