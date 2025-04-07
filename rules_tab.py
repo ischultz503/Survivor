@@ -36,4 +36,4 @@ def rules_tab():
         return formatted
 
     formatted_df = format_conditionally(df)
-    st.table(formatted_df)
+    st.dataframe(formatted_df.style.hide(axis='index'), use_container_width=True)
