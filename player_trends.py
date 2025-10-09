@@ -4,25 +4,70 @@ Created on Wed Mar 26 13:37:47 2025
 
 @author: IsaacSchultz
 """
-
+from utils_cache import read_excel, read_csv, cache_df
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+
 def trends_tab():
+    def get_all_rosters(season):
+        if season == "Season 49":
+            return {
+                "NE Portland": pd.DataFrame({
+                    "Picasso": ['Savannah','Steven','Jawan','Sage'],
+                    "Brackie": ['MC','Rizo','Matt','Shannon' ],
+                    "Polron":  ['Sophie S','Nate','Jason','Kristina'],
+                    "Kanna":   ['Alex','Jeremiah','Sophi B','Jake']
+                }),
+                "Bi-coastal Elites": pd.DataFrame({
+                    "Jena":            ['Matt','Sophie S','Rizo'],
+                    "Schultz & Big P": ['Kristina','Alex','Savannah'],
+                    "Isaac":           ['Jawan','Jeremiah','Steven'],
+                    "Mike":            ['Nate','Jake','Sage'],
+                    "Nick":            ['MC','Nicole','Annie'],
+                    "Eric":            ['Jason','Sophi B','Shannon']
+                })
+            }
+        if season == "Season 48":
+            return {
+                "NE Portland": pd.DataFrame({
+                    "Picasso": ['Eva','Mitch','Mary','Sai'],
+                    "Brackie": ['Kamilla','Kyle','Chrissy','Cedrek'],
+                    "Polron":  ['Joe','Thomas','Bianca','Charity'],
+                    "Kanna":   ['Shauhin','Justin','Star','David']
+                })
+            }
+        if season == "Season 47":
+            return {
+                "NE Portland": pd.DataFrame({
+                    "Picasso": ['Sam','Sierra','Genevieve','Sue','Caroline'],
+                    "Brackie": ['Kyle','Rome','Sol','Anika','Kishan'],
+                    "Polron":  ['Teeny','Rachel','Andy','Gabe','Tiyana']
+                })
+            }
+
     st.header("Player Trends")
 
     # Load from session state
     season = st.session_state["season"]
     league = st.session_state["league"]
-
-    # File paths
+    
+        # File paths
     if season == "Season 47":
         scores_file = "data/PointsScored_Survivor_47.xlsx"
     elif season == "Season 48":
         scores_file = "data/PointsScored_Survivor_48.xlsx"
-
-    point_values = pd.read_csv("data/PointValues_Survivor.csv")
+    elif season == "Season 49":
+        if league == 'Bi-coastal Elites':
+            scores_file = "data/East/Survivor_49_East.xlsx"
+        else:
+            scores_file = "data/PointsScored_Survivor_49.xlsx"
+    
+    if league == 'Bi-coastal Elites':
+        point_values = pd.read_excel("data/east/Survivor_49_East.xlsx", sheet_name="PointValues_Survivor")
+    else:
+        point_values = pd.read_csv("data/PointValues_Survivor.csv")
 
     # --- Load and process data ---
     def clean_data(df):
@@ -54,15 +99,41 @@ def trends_tab():
     # Load and score
 
     raw_scores = pd.read_excel(scores_file, sheet_name="PointsScored_Survivor")
+    key_rs = f"{league}|{season}|raw_scores"
+    raw_scores = cache_df(key_rs, raw_scores)
+    
     raw_scores, event_cols = apply_point_values(raw_scores, point_values)
+    key_scored = f"{league}|{season}|scored_trends"
+    raw_scores = cache_df(key_scored, raw_scores)
+    
     scoreboard = get_scoreboard(raw_scores)
+    key_board = f"{league}|{season}|scoreboard_trends"
+    scoreboard = cache_df(key_board, scoreboard)
+
+    # --- Team filter (optional) ---
+    rosters = get_all_rosters(season)
+    roster_df = rosters.get(league)
+    
+    # Build the team list if we have rosters for this league; otherwise just default to All teams
+    team_options = ["All teams"] + (roster_df.columns.tolist() if isinstance(roster_df, pd.DataFrame) else [])
+    selected_team = st.selectbox("Team (optional)", team_options, index=0)
+
+
 
     # --- Controls ---
-    player_list = sorted(raw_scores["Player"].unique())  # Alphabetized
-    selected_players = st.multiselect("Select Players", player_list, default=player_list[:1])
-
+    player_list = sorted(raw_scores["Player"].unique())  # all players in the season
+    if selected_team != "All teams" and isinstance(roster_df, pd.DataFrame):
+        team_players = roster_df[selected_team].dropna().tolist()
+        # Default to everyone on the chosen team
+        default_players = team_players if len(team_players) > 0 else player_list[:1]
+        help_txt = f"Showing players on {selected_team}. You can add/remove players."
+    else:
+        default_players = player_list[:1]
+        help_txt = "Pick any players to compare."
+    
+    selected_players = st.multiselect("Select Players", player_list, default=default_players, help=help_txt)
+    
     view_type = st.radio("Score View", ["Cumulative", "Weekly"], horizontal=True)
-
     filtered = scoreboard[scoreboard["Player"].isin(selected_players)]
 
     # --- Chart ---

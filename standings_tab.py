@@ -4,7 +4,7 @@ Created on Wed Mar 26 11:53:21 2025
 
 @author: IsaacSchultz
 """
-
+from utils_cache import read_excel, read_csv, cache_df, cache_obj
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -15,49 +15,86 @@ from io import BytesIO
 def standings_tab():
     st.header("Standings and Team Rosters")
     def overlay_red_x(image_url):
+        key = f"redx|{image_url}"
+        cached = cache_obj(key, None)
+        if cached is not None:
+            return cached
+    
         response = requests.get(image_url)
         img = Image.open(BytesIO(response.content)).convert("RGBA")
     
         draw = ImageDraw.Draw(img)
-    
         width, height = img.size
         line_width = int(width * 0.08)
-    
-        # Draw red X across the image
         draw.line((0, 0, width, height), fill=(255, 0, 0, 255), width=line_width)
         draw.line((width, 0, 0, height), fill=(255, 0, 0, 255), width=line_width)
     
-        return img
+        return cache_obj(key, img)
+
+    
+    
     # --- Pull global state from sidebar ---
     season = st.session_state["season"]
     league = st.session_state["league"]
 
     # --- Load data ---
 
-    
+    if season == "Season 49":
+        images_path = 'data/Player_images_S49_Survivor.xlsx'
+        if league == 'Bi-coastal Elites':
+            scores_file_path = "data/East/Survivor_49_East.xlsx"
+        
+        else:    
+            scores_file_path = "data/PointsScored_Survivor_49.xlsx"
+            
     if season == "Season 48":
         scores_file_path = "data/PointsScored_Survivor_48.xlsx"
-        images_path = 'data/Player_images_S48_Survivor.csv'
+        images_path = 'data/Player_images_S48_Survivor.xlsx'
     if season == 'Season 47':
         scores_file_path = "data/PointsScored_Survivor_47.xlsx"
-        images_path = 'data/Player_images_S47_Survivor.csv'
+        images_path = 'data/Player_images_S47_Survivor.xlsx'
     
 
-    def load_data():
-        raw_scores = pd.read_excel(scores_file_path, sheet_name="PointsScored_Survivor")
-        bonus_scores = pd.read_excel(scores_file_path, sheet_name="Weekly_Pick_Scores")
+    def load_data(scores_file_path, images_path, league):
+        raw_scores   = read_excel(scores_file_path, "PointsScored_Survivor")
+        bonus_scores = read_excel(scores_file_path, "Weekly_Pick_Scores")
         bonus_scores = bonus_scores.drop(columns=["Week"])
-        bonus_scores.columns = bonus_scores.columns.str.strip()  # Also ensure no whitespace
-        point_values = pd.read_csv("data/PointValues_Survivor.csv")
-        player_images = pd.read_csv(images_path)
+        bonus_scores.columns = bonus_scores.columns.str.strip()
+    
+        if league == "Bi-coastal Elites":
+            point_values = read_excel(scores_file_path, "PointValues_Survivor")
+        else:
+            point_values = read_csv("data/PointValues_Survivor.csv")
+    
+        player_images = read_excel(images_path, "Images")
         return raw_scores, bonus_scores, point_values, player_images
 
 
-    raw_scores, bonus_scores, point_values, player_images = load_data()
+    raw_scores, bonus_scores, point_values, player_images = load_data(
+    scores_file_path, images_path, league)
+
 
 
     # --- Roster definitions ---
     def get_all_rosters(season):
+        if season == "Season 49":
+            return {
+                "NE Portland": pd.DataFrame({
+                    "Picasso": ['Savannah','Steven','Jawan','Sage'],
+                    "Brackie": ['MC','Rizo','Matt','Shannon' ],
+                    "Polron":  ['Sophie S','Nate','Jason','Kristina'],
+                    'Kanna':   ['Alex','Jeremiah','Sophi B','Jake']}),
+                    
+                    "Bi-coastal Elites": pd.DataFrame({
+                        'Jena':            ['Matt','Sophie S','Rizo'],
+                        'Schultz & Big P': ['Kristina','Alex','Savannah' ],
+                        'Isaac':           ['Jawan','Jeremiah','Steven'],
+                        'Mike':            ['Nate','Jake','Sage'],
+                        'Nick':            ['MC','Nicole','Annie'],
+                        'Eric':            ['Jason','Sophi B','Shannon']})
+                
+            }
+        
         if season == "Season 48":
             return {
                 "NE Portland": pd.DataFrame({
@@ -135,9 +172,16 @@ def standings_tab():
 
     # --- Process Scoring ---
     scored, _ = apply_point_values(raw_scores, point_values)
+    key_scored = f"{league}|{season}|scored"
+    scored = cache_df(key_scored, scored)
 
     scoreboard = get_scoreboard(scored)
+    key_scoreboard = f"{league}|{season}|scoreboard"
+    scoreboard = cache_df(key_scoreboard, scoreboard)    
+    
     standings_df = get_team_totals(scoreboard, roster_df, bonus_scores)
+    key_standings = f"{league}|{season}|standings"
+    standings_df = cache_df(key_standings, standings_df)
 
 #####################################################################################
     # --- Line Chart: Team Scores by Week ---
@@ -199,6 +243,8 @@ def standings_tab():
     if chart_type == "Cumulative Line Chart":
         st.subheader("Team Scores by Week (Cumulative)")
         team_week_df = get_cumulative_team_scores(scoreboard, roster_df, bonus_scores)
+        key_cum = f"{league}|{season}|team_week_cumulative"
+        team_week_df = cache_df(key_cum, team_week_df)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.line(team_long, x="Week", y="Score", color="Team", markers=True)
         fig.update_layout(height=400)
@@ -207,6 +253,8 @@ def standings_tab():
     elif chart_type == "Weekly Bar Chart":
         st.subheader("Team Scores by Week (Non-Cumulative)")
         team_week_df = get_weekly_team_scores(scoreboard, roster_df, bonus_scores)
+        key_weekly = f"{league}|{season}|team_week_weekly"
+        team_week_df = cache_df(key_weekly, team_week_df)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.bar(team_long, x="Week", y="Score", color="Team", text="Score")
         fig.update_layout(barmode="group", height=450, xaxis=dict(type='category'))

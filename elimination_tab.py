@@ -10,6 +10,8 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
+import requests
+from utils_cache import cache_obj
 
 def eliminations_tab():
     st.header("Player Eliminations")
@@ -33,16 +35,19 @@ def eliminations_tab():
 
     # File paths per season
     if season == "Season 47":
-        score_file = "data/PointsScored_Survivor_47.xlsx"
-        image_file = "data/Player_images_S47_Survivor.csv"
+
+        image_file = "data/Player_images_S47_Survivor.xlsx"
     elif season == "Season 48":
-        score_file = "data/PointsScored_Survivor_48.xlsx"
-        image_file = "data/Player_images_S48_Survivor.csv"
+
+        image_file = "data/Player_images_S48_Survivor.xlsx"
+    elif season == "Season 49":
+
+        image_file = "data/Player_images_S49_Survivor.xlsx"
 
     # Load data
-    elim_table = pd.read_excel(score_file, sheet_name="Elimination_Table")
-    player_images = pd.read_csv(image_file)
-
+    elim_table    = read_excel(image_file, "Elimination_Table")
+    player_images = read_excel(image_file, "Images")
+    
     # Merge to get image URLs
     merged = pd.merge(elim_table, player_images, on="Player", how="left")
     merged = merged.dropna(subset=["Image"])

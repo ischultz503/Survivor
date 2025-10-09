@@ -7,6 +7,8 @@ Created on Wed Mar 26 11:51:16 2025
 
 import streamlit as st
 import pandas as pd
+from utils_cache import read_excel, read_csv
+
 
 def rules_tab():
     st.header("Scoring System")
@@ -17,7 +19,12 @@ def rules_tab():
     """)
     
     # Load the point values table
-    df = pd.read_csv("data/table.csv")
+    league = st.session_state.get("league")
+    
+    if league == 'Bi-coastal Elites':
+        df = read_excel("data/east/Survivor_49_East.xlsx", "Scoreboard_Table")
+    else:
+        df = read_csv("data/scoreboard_table.csv")
     st.subheader("Point Values")
     
     # Apply formatting to only certain events

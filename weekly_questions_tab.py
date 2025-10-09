@@ -6,8 +6,14 @@ Weekly Tab - Bonus points, question responses, and team accuracy
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
+from utils_cache import read_excel, cache_df
+import numpy as np
 
-def weekly_tab():
+def weekly_questions_tab():
+    season = st.session_state["season"]
+    league = st.session_state["league"]
+
     st.header("Weekly Bonus Questions")
 
     season = st.session_state["season"]
@@ -15,15 +21,19 @@ def weekly_tab():
     # --- Load bonus points ---
     def load_weekly_picks():
         if season == 'Season 47':
-            return pd.read_excel("data/PointsScored_Survivor_47.xlsx", sheet_name="Weekly_Pick_Scores")
+            return read_excel("data/PointsScored_Survivor_47.xlsx", "Weekly_Pick_Scores")
         if season == 'Season 48':
-            return pd.read_excel("data/PointsScored_Survivor_48.xlsx", sheet_name="Weekly_Pick_Scores")
-
+            return read_excel("data/PointsScored_Survivor_48.xlsx", "Weekly_Pick_Scores")
+        if season == 'Season 49':
+            if league == 'Bi-coastal Elites':
+                return read_excel("data/east/Survivor_49_East.xlsx", "Weekly_Pick_Scores")
+            else:
+                return read_excel("data/PointsScored_Survivor_49.xlsx", "Weekly_Pick_Scores")
     df = load_weekly_picks()
     df = df.fillna(0)  # 👈 convert any missing values to 0
     df["Week"] = df["Week"].astype(str)  # 👈 make Week a string so it's consistent
 
-    st.markdown("These are bonus points awarded to teams each week based on prediction questions or other bonuses.")
+    st.markdown("Points earned for correct answers to the weekly questions")
 
     # --- Toggle for bonus chart view ---
     view_type = st.radio("Bonus Chart View", ["Weekly", "Cumulative"], horizontal=True)
@@ -32,6 +42,8 @@ def weekly_tab():
     df["Week"] = df["Week"].astype(str)
     df_long = df.melt(id_vars="Week", var_name="Team", value_name="Bonus Points")
     df_long["Week"] = df_long["Week"].astype(str)
+    key_bonus_long = f"{league}|{season}|bonus_long"
+    df_long = cache_df(key_bonus_long, df_long)
 
     if view_type == "Cumulative":
         df_long["Bonus Points"] = df_long.sort_values("Week").groupby("Team")["Bonus Points"].cumsum()
@@ -59,16 +71,29 @@ def weekly_tab():
     st.dataframe(df_full.set_index("Week"), use_container_width=True)
 
     # --- Weekly Question Responses ---
-    st.subheader("Team Answers to Weekly Questions")
+    st.subheader("Answers to Weekly Questions")
 
     def load_question_answers():
         if season == 'Season 47':
-            return pd.read_excel("data/PointsScored_Survivor_47.xlsx", sheet_name="Weekly_Questions")
+            return read_excel("data/PointsScored_Survivor_47.xlsx", "Weekly_Questions")
         if season == 'Season 48':
-            return pd.read_excel("data/PointsScored_Survivor_48.xlsx", sheet_name="Weekly_Questions")
+            return read_excel("data/PointsScored_Survivor_48.xlsx", "Weekly_Questions")
+        if season == 'Season 49':
+            if league == 'Bi-coastal Elites':
+                return read_excel("data/east/Survivor_49_East.xlsx", "Weekly_Questions")
+            else:
+                return read_excel("data/PointsScored_Survivor_49.xlsx", "Weekly_Questions")
 
     qa_df = load_question_answers()
-    qa_df["Is Voided"] = qa_df["Is Voided"].fillna(False)
+    
+    qa_df["Is Voided"] = (
+    qa_df["Is Voided"]
+      .astype(str).str.strip().str.lower()
+      .map({"yes": True, "y": True, "true": True, "1": True,
+            "no": False, "n": False, "false": False, "0": False})
+      .fillna(False))
+    
+    
     teams = [col for col in qa_df.columns if col not in ["Week", "Question", "Correct Answer", "Is Voided"]]
     qa_df["Week"] = qa_df["Week"].astype(str)
 
@@ -81,23 +106,32 @@ def weekly_tab():
     full_week_df = week_df.copy()
     week_display = full_week_df.drop(columns=["Is Voided",'Week'])
 
+    def _normalize_answers(val):
+        if pd.isna(val):
+            return set()
+        if isinstance(val, (list, tuple, set)):
+            return {str(x).strip() for x in val}
+        if isinstance(val, str):
+            parts = [p.strip() for p in re.split(r"[,/;]", val) if p.strip()]
+            return set(parts if parts else [val.strip()])
+        return {str(val).strip()}
+    
     def highlight_answers(row):
         styles = []
-        is_voided = full_week_df.loc[row.name, "Is Voided"]
-        correct_answer = full_week_df.loc[row.name, "Correct Answer"]
-
+        is_voided = bool(full_week_df.loc[row.name, "Is Voided"])
+        correct_list = _normalize_answers(full_week_df.loc[row.name, "Correct Answer"])
+    
         for col in row.index:
             if is_voided:
                 styles.append("background-color: lightgray")
             elif col in teams:
-                if row[col] == correct_answer:
-                    styles.append("background-color: lightgreen")
-                else:
-                    styles.append("background-color: lightcoral")
+                cell = str(row[col]).strip()
+                styles.append("background-color: lightgreen" if cell in correct_list
+                              else "background-color: lightcoral")
             else:
                 styles.append("")
         return styles
-
+    
     styled = week_display.style.apply(highlight_answers, axis=1).set_table_styles(
         [{"selector": "td", "props": [("font-size", "12px")]}]
     )
