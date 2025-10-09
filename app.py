@@ -14,6 +14,32 @@ LEAGUE_SEASONS = {
 }
 
 st.sidebar.header("Fantasy Survivor")
+def get_paths(league, season):
+    if season == "Season 49":
+        scores = (
+            "data/east/Survivor_49_East.xlsx"
+            if league == "Bi-coastal Elites"
+            else "data/PointsScored_Survivor_49.xlsx"
+        )
+        images = "data/Player_images_S49_Survivor.xlsx"
+    elif season == "Season 48":
+        scores = "data/PointsScored_Survivor_48.xlsx"
+        images = "data/Player_images_S48_Survivor.xlsx"
+    else:  # 47
+        scores = "data/PointsScored_Survivor_47.xlsx"
+        images = "data/Player_images_S47_Survivor.xlsx"
+
+    point_values = (
+        "data/east/Survivor_49_East.xlsx"
+        if league == "Bi-coastal Elites" and season == "Season 49"
+        else "data/PointValues_Survivor.csv"
+    )
+
+    return {"scores": scores, "images": images, "point_values": point_values}
+
+
+paths = get_paths(st.session_state["league"], st.session_state["season"])
+st.session_state["paths"] = paths
 
 # set once; widgets will manage values afterwards
 st.session_state.setdefault("league", "NE Portland")

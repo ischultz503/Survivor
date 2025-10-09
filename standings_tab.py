@@ -13,6 +13,12 @@ import requests
 from io import BytesIO
 
 def standings_tab():
+    league = st.session_state["league"]
+    season = st.session_state["season"]
+    paths  = st.session_state["paths"]
+    scores_file_path = paths["scores"]
+    images_path      = paths["images"]
+    point_values_src = paths["point_values"]
     st.header("Standings and Team Rosters")
     def overlay_red_x(image_url):
         key = f"redx|{image_url}"
@@ -55,14 +61,14 @@ def standings_tab():
         images_path = 'data/Player_images_S47_Survivor.xlsx'
     
 
-    def load_data(scores_file_path, images_path, league):
+    def load_data(scores_file_path, images_path, league, point_values_src):
         raw_scores   = read_excel(scores_file_path, "PointsScored_Survivor")
         bonus_scores = read_excel(scores_file_path, "Weekly_Pick_Scores")
         bonus_scores = bonus_scores.drop(columns=["Week"])
         bonus_scores.columns = bonus_scores.columns.str.strip()
     
         if league == "Bi-coastal Elites":
-            point_values = read_excel(scores_file_path, "PointValues_Survivor")
+            point_values = read_excel(point_values_src, "PointValues_Survivor")
         else:
             point_values = read_csv("data/PointValues_Survivor.csv")
     
@@ -70,8 +76,10 @@ def standings_tab():
         return raw_scores, bonus_scores, point_values, player_images
 
 
+
     raw_scores, bonus_scores, point_values, player_images = load_data(
-    scores_file_path, images_path, league)
+        scores_file_path, images_path, league, point_values_src
+    )
 
 
 
