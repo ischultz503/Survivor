@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
 import requests
-from utils_cache import cache_obj
+from utils_cache import cache_obj, read_excel
 
 def eliminations_tab():
     st.header("Player Eliminations")

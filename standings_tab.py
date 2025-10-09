@@ -42,7 +42,7 @@ def standings_tab():
     if season == "Season 49":
         images_path = 'data/Player_images_S49_Survivor.xlsx'
         if league == 'Bi-coastal Elites':
-            scores_file_path = "data/East/Survivor_49_East.xlsx"
+            scores_file_path = "data/east/Survivor_49_East.xlsx"
         
         else:    
             scores_file_path = "data/PointsScored_Survivor_49.xlsx"
