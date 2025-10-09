@@ -38,11 +38,6 @@ def get_paths(league, season):
     return {"scores": scores, "images": images, "point_values": point_values}
 
 
-# ✅ Only run get_paths() after league/season exist in session_state
-if "league" in st.session_state and "season" in st.session_state:
-    paths = get_paths(st.session_state["league"], st.session_state["season"])
-    st.session_state["paths"] = paths
-
 # set once; widgets will manage values afterwards
 st.session_state.setdefault("league", "NE Portland")
 st.session_state.setdefault("season", LEAGUE_SEASONS[st.session_state["league"]][0])
@@ -56,6 +51,9 @@ if st.session_state["season"] not in allowed:
     st.session_state["season"] = allowed[0]
 
 season = st.sidebar.selectbox("Season", allowed, key="season")
+# Build and store paths now that league/season are set
+paths = get_paths(league, season)
+st.session_state["paths"] = paths
 
 # (Optional) expose for tabs
 st.session_state["selected_league"] = league

@@ -42,23 +42,6 @@ def standings_tab():
     # --- Pull global state from sidebar ---
     season = st.session_state["season"]
     league = st.session_state["league"]
-
-    # --- Load data ---
-
-    if season == "Season 49":
-        images_path = 'data/Player_images_S49_Survivor.xlsx'
-        if league == 'Bi-coastal Elites':
-            scores_file_path = "data/east/Survivor_49_East.xlsx"
-        
-        else:    
-            scores_file_path = "data/PointsScored_Survivor_49.xlsx"
-            
-    if season == "Season 48":
-        scores_file_path = "data/PointsScored_Survivor_48.xlsx"
-        images_path = 'data/Player_images_S48_Survivor.xlsx'
-    if season == 'Season 47':
-        scores_file_path = "data/PointsScored_Survivor_47.xlsx"
-        images_path = 'data/Player_images_S47_Survivor.xlsx'
     
 
     def load_data(scores_file_path, images_path, league, point_values_src):
