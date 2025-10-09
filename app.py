@@ -38,8 +38,10 @@ def get_paths(league, season):
     return {"scores": scores, "images": images, "point_values": point_values}
 
 
-paths = get_paths(st.session_state["league"], st.session_state["season"])
-st.session_state["paths"] = paths
+# ✅ Only run get_paths() after league/season exist in session_state
+if "league" in st.session_state and "season" in st.session_state:
+    paths = get_paths(st.session_state["league"], st.session_state["season"])
+    st.session_state["paths"] = paths
 
 # set once; widgets will manage values afterwards
 st.session_state.setdefault("league", "NE Portland")
