@@ -60,7 +60,7 @@ def trends_tab():
         scores_file = "data/PointsScored_Survivor_48.xlsx"
     elif season == "Season 49":
         if league == 'Bi-coastal Elites':
-            scores_file = "data/East/Survivor_49_East.xlsx"
+            scores_file = "data/east/Survivor_49_East.xlsx"
         else:
             scores_file = "data/PointsScored_Survivor_49.xlsx"
     
