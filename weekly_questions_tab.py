@@ -15,6 +15,8 @@ def clean_week_column(series: pd.Series) -> pd.Series:
     return wk.astype("Int64")  # keep as nullable int for all joins/filters/sorts
 
 def weekly_questions_tab():
+    scores_file_path = st.session_state["paths"]["scores"]
+    
     season = st.session_state["season"]
     league = st.session_state["league"]
 
@@ -47,7 +49,8 @@ def weekly_questions_tab():
     # Use a display label for x-axis but keep numeric Week underneath
     df_long = df.melt(id_vars="Week", var_name="Team", value_name="Bonus Points")
     key_bonus_long = f"{league}|{season}|bonus_long"
-    df_long = cache_df(key_bonus_long, df_long)
+    df_long = cache_df(key_bonus_long, df_long, file_path=scores_file_path)
+
 
     if view_type == "Cumulative":
         df_long = df_long.sort_values(["Team", "Week"])

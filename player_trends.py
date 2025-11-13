@@ -100,15 +100,18 @@ def trends_tab():
 
     raw_scores = pd.read_excel(scores_file, sheet_name="PointsScored_Survivor")
     key_rs = f"{league}|{season}|raw_scores"
-    raw_scores = cache_df(key_rs, raw_scores)
+    raw_scores = cache_df(key_rs, raw_scores, file_path=scores_file)
+
     
     raw_scores, event_cols = apply_point_values(raw_scores, point_values)
     key_scored = f"{league}|{season}|scored_trends"
-    raw_scores = cache_df(key_scored, raw_scores)
+    raw_scores = cache_df(key_scored, raw_scores, file_path=scores_file)
+
     
     scoreboard = get_scoreboard(raw_scores)
     key_board = f"{league}|{season}|scoreboard_trends"
-    scoreboard = cache_df(key_board, scoreboard)
+    scoreboard = cache_df(key_board, scoreboard, file_path=scores_file)
+
 
     # --- Team filter (optional) ---
     rosters = get_all_rosters(season)

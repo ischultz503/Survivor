@@ -164,15 +164,15 @@ def standings_tab():
     # --- Process Scoring ---
     scored, _ = apply_point_values(raw_scores, point_values)
     key_scored = f"{league}|{season}|scored"
-    scored = cache_df(key_scored, scored)
+    scored = cache_df(key_scored, scored, file_path=scores_file_path)
 
     scoreboard = get_scoreboard(scored)
     key_scoreboard = f"{league}|{season}|scoreboard"
-    scoreboard = cache_df(key_scoreboard, scoreboard)    
+    scoreboard = cache_df(key_scoreboard, scoreboard, file_path=scores_file_path)
     
     standings_df = get_team_totals(scoreboard, roster_df, bonus_scores)
     key_standings = f"{league}|{season}|standings"
-    standings_df = cache_df(key_standings, standings_df)
+    standings_df = cache_df(key_standings, standings_df, file_path=scores_file_path)
 
 #####################################################################################
     # --- Line Chart: Team Scores by Week ---
@@ -235,7 +235,7 @@ def standings_tab():
         st.subheader("Team Scores by Week (Cumulative)")
         team_week_df = get_cumulative_team_scores(scoreboard, roster_df, bonus_scores)
         key_cum = f"{league}|{season}|team_week_cumulative"
-        team_week_df = cache_df(key_cum, team_week_df)
+        team_week_df = cache_df(key_cum, team_week_df, file_path=scores_file_path)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.line(team_long, x="Week", y="Score", color="Team", markers=True)
         fig.update_layout(height=400)
@@ -245,7 +245,7 @@ def standings_tab():
         st.subheader("Team Scores by Week (Non-Cumulative)")
         team_week_df = get_weekly_team_scores(scoreboard, roster_df, bonus_scores)
         key_weekly = f"{league}|{season}|team_week_weekly"
-        team_week_df = cache_df(key_weekly, team_week_df)
+        team_week_df = cache_df(key_cum, team_week_df, file_path=scores_file_path)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.bar(team_long, x="Week", y="Score", color="Team", text="Score")
         fig.update_layout(barmode="group", height=450, xaxis=dict(type='category'))
