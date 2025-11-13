@@ -235,7 +235,7 @@ def standings_tab():
         st.subheader("Team Scores by Week (Cumulative)")
         team_week_df = get_cumulative_team_scores(scoreboard, roster_df, bonus_scores)
         key_cum = f"{league}|{season}|team_week_cumulative"
-        team_week_df = cache_df(key_cum, team_week_df, file_path=scores_file_path)
+        team_week_df = cache_df(key_weekly, team_week_df, file_path=scores_file_path)
         team_long = team_week_df.melt(id_vars="Week", var_name="Team", value_name="Score")
         fig = px.line(team_long, x="Week", y="Score", color="Team", markers=True)
         fig.update_layout(height=400)
