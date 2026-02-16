@@ -354,12 +354,76 @@ def build_team_dashboard(team_id: int) -> dict[str, pd.DataFrame | float | int]:
             conn,
             params=[row["league_name"], row["season_label"]],
         )
+
+        player_weekly = pd.read_sql_query(
+            """
+            SELECT pes.week_number,
+                   rp.player_name,
+                   SUM(pes.value * pv.points) AS points
+            FROM roster_players rp
+            JOIN teams t ON t.id=rp.team_id
+            JOIN player_event_scores pes ON pes.player_name=rp.player_name AND pes.season_id=t.season_id
+            JOIN point_values pv ON pv.season_id=pes.season_id AND pv.event_name=pes.event_name
+            WHERE rp.team_id=?
+            GROUP BY pes.week_number, rp.player_name
+            ORDER BY pes.week_number, points DESC, rp.player_name
+            """,
+            conn,
+            params=[team_id],
+        )
+
+        event_breakdown = pd.read_sql_query(
+            """
+            SELECT pes.week_number,
+                   rp.player_name,
+                   pes.event_name,
+                   pes.value,
+                   pv.points,
+                   (pes.value * pv.points) AS event_points
+            FROM roster_players rp
+            JOIN teams t ON t.id=rp.team_id
+            JOIN player_event_scores pes ON pes.player_name=rp.player_name AND pes.season_id=t.season_id
+            JOIN point_values pv ON pv.season_id=pes.season_id AND pv.event_name=pes.event_name
+            WHERE rp.team_id=?
+            ORDER BY pes.week_number DESC, event_points DESC, rp.player_name
+            """,
+            conn,
+            params=[team_id],
+        )
+
+        bonus_weekly = pd.read_sql_query(
+            """
+            SELECT week_number, points
+            FROM weekly_question_scores
+            WHERE team_id=?
+            ORDER BY week_number
+            """,
+            conn,
+            params=[team_id],
+        )
     total = float(weekly["week_total"].sum()) if not weekly.empty else 0.0
     current_week = int(weekly["week_number"].max()) if not weekly.empty else 0
+    player_totals = (
+        player_weekly.groupby("player_name", as_index=False)["points"]
+        .sum()
+        .sort_values("points", ascending=False)
+        .rename(columns={"player_name": "Player", "points": "Total Points"})
+    )
+
+    elimination_events = event_breakdown[
+        event_breakdown["event_name"].str.contains(
+            "eliminat|exits|kicked off|fire making|rocks|voluntar", case=False, regex=True
+        )
+    ].copy()
     return {
         "meta": pd.DataFrame([dict(row)]),
         "weekly": weekly,
         "standings": standings,
+        "player_weekly": player_weekly,
+        "player_totals": player_totals,
+        "event_breakdown": event_breakdown,
+        "bonus_weekly": bonus_weekly,
+        "eliminations": elimination_events,
         "total": total,
         "current_week": current_week,
     }
@@ -426,4 +490,3 @@ def list_teams_for_league_season(league_name: str, season_label: str) -> list[st
             (league_name, season_label),
         ).fetchall()
     return [r["name"] for r in rows]
-

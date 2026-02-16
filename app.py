@@ -15,7 +15,7 @@ st.set_page_config(page_title="Fantasy Survivor", page_icon="🏝️", layout="w
 init_db(force_seed=True)
 
 st.title("🏝️ Fantasy Survivor League Hub")
-st.caption("A modern fantasy dashboard for league standings, your team performance, and weekly trends.")
+st.caption("A modern fantasy dashboard for standings, player/team performance, bonuses, and eliminations.")
 
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -93,39 +93,119 @@ col1.metric("Team", meta["team_name"])
 col2.metric("Current Week", data["current_week"])
 col3.metric("Total Points", f"{data['total']:.1f}")
 
-st.subheader("Standings")
-standings = data["standings"].copy()
-standings["Rank"] = standings["total_points"].rank(ascending=False, method="min").astype(int)
-standings = standings[["Rank", "team_name", "total_points"]].rename(
-    columns={"team_name": "Team", "total_points": "Points"}
+tab_team, tab_players, tab_bonus, tab_elims, tab_events = st.tabs(
+    ["Team Performance", "Player Performance", "Bonus Questions", "Eliminations", "Event Details"]
 )
-st.dataframe(standings, use_container_width=True)
 
-weekly = data["weekly"]
-if not weekly.empty:
-    chart_col1, chart_col2 = st.columns(2)
-    with chart_col1:
-        st.subheader("Cumulative Trend")
-        fig = px.line(weekly, x="week_number", y="cumulative_total", markers=True)
-        fig.update_layout(xaxis_title="Week", yaxis_title="Cumulative Points", height=380)
+with tab_team:
+    st.subheader("Standings")
+    standings = data["standings"].copy()
+    standings["Rank"] = standings["total_points"].rank(ascending=False, method="min").astype(int)
+    standings = standings[["Rank", "team_name", "total_points"]].rename(
+        columns={"team_name": "Team", "total_points": "Points"}
+    )
+    st.dataframe(standings, use_container_width=True)
+
+    weekly = data["weekly"]
+    if not weekly.empty:
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.subheader("Cumulative Trend")
+            fig = px.line(weekly, x="week_number", y="cumulative_total", markers=True)
+            fig.update_layout(xaxis_title="Week", yaxis_title="Cumulative Points", height=380)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with chart_col2:
+            st.subheader("Weekly Team Breakdown")
+            melted = weekly.melt(
+                id_vars=["week_number"],
+                value_vars=["player_points", "bonus_points"],
+                var_name="source",
+                value_name="points",
+            )
+            fig2 = px.bar(melted, x="week_number", y="points", color="source", barmode="group")
+            fig2.update_layout(xaxis_title="Week", yaxis_title="Points", height=380)
+            st.plotly_chart(fig2, use_container_width=True)
+
+        with st.expander("Raw weekly scoring data"):
+            st.dataframe(weekly, use_container_width=True)
+    else:
+        st.info("No weekly data is available yet for this team.")
+
+with tab_players:
+    st.subheader("Player Totals")
+    player_totals = data["player_totals"]
+    if not player_totals.empty:
+        st.dataframe(player_totals, use_container_width=True)
+        fig = px.bar(player_totals, x="Player", y="Total Points", color="Player")
+        fig.update_layout(showlegend=False, height=380)
         st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No individual player points are available yet.")
 
-    with chart_col2:
-        st.subheader("Weekly Breakdown")
-        melted = weekly.melt(
-            id_vars=["week_number"],
-            value_vars=["player_points", "bonus_points"],
-            var_name="source",
-            value_name="points",
+    st.subheader("Weekly Player Performance")
+    player_weekly = data["player_weekly"]
+    if not player_weekly.empty:
+        fig = px.line(
+            player_weekly,
+            x="week_number",
+            y="points",
+            color="player_name",
+            markers=True,
+            labels={"week_number": "Week", "points": "Points", "player_name": "Player"},
         )
-        fig2 = px.bar(melted, x="week_number", y="points", color="source", barmode="group")
-        fig2.update_layout(xaxis_title="Week", yaxis_title="Points", height=380)
-        st.plotly_chart(fig2, use_container_width=True)
+        fig.update_layout(height=420)
+        st.plotly_chart(fig, use_container_width=True)
+        st.dataframe(player_weekly, use_container_width=True)
+    else:
+        st.info("No weekly player data available.")
 
-    with st.expander("Raw weekly scoring data"):
-        st.dataframe(weekly, use_container_width=True)
-else:
-    st.info("No weekly data is available yet for this team.")
+with tab_bonus:
+    st.subheader("Weekly Bonus Question Results")
+    bonus = data["bonus_weekly"].rename(columns={"week_number": "Week", "points": "Bonus Points"})
+    if not bonus.empty:
+        st.dataframe(bonus, use_container_width=True)
+        fig = px.bar(bonus, x="Week", y="Bonus Points")
+        fig.update_layout(height=380)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No bonus question points have been recorded yet.")
+
+with tab_elims:
+    st.subheader("Elimination-related Events")
+    elim = data["eliminations"].copy()
+    if not elim.empty:
+        elim = elim.rename(
+            columns={
+                "week_number": "Week",
+                "player_name": "Player",
+                "event_name": "Event",
+                "value": "Count",
+                "points": "Point Value",
+                "event_points": "Points Awarded",
+            }
+        )
+        st.dataframe(elim, use_container_width=True)
+    else:
+        st.info("No elimination events have been scored yet for this roster.")
+
+with tab_events:
+    st.subheader("All Scoring Events")
+    events = data["event_breakdown"].copy()
+    if not events.empty:
+        events = events.rename(
+            columns={
+                "week_number": "Week",
+                "player_name": "Player",
+                "event_name": "Event",
+                "value": "Count",
+                "points": "Point Value",
+                "event_points": "Points Awarded",
+            }
+        )
+        st.dataframe(events, use_container_width=True)
+    else:
+        st.info("No event-level data is available yet.")
 
 st.markdown("---")
 st.caption("Admin scoring updates can be entered through `admin_app.py` and are reflected here automatically.")
