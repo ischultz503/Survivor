@@ -1,80 +1,131 @@
 import streamlit as st
-from rules_tab import rules_tab
-from standings_tab import standings_tab
-from weekly_questions_tab import weekly_questions_tab
-from elimination_tab import eliminations_tab
-from player_trends import trends_tab
+import plotly.express as px
+
+from fantasy_backend import (
+    assign_team,
+    authenticate_user,
+    build_team_dashboard,
+    init_db,
+    list_all_teams,
+    list_league_season_options_for_user,
+    register_user,
+)
+
+st.set_page_config(page_title="Fantasy Survivor", page_icon="🏝️", layout="wide")
+init_db(force_seed=True)
+
+st.title("🏝️ Fantasy Survivor League Hub")
+st.caption("A modern fantasy dashboard for league standings, your team performance, and weekly trends.")
+
+if "user" not in st.session_state:
+    st.session_state.user = None
 
 
-# app.py (sidebar picker)
+def login_panel() -> None:
+    tab_login, tab_register = st.tabs(["Login", "Create Account"])
 
-LEAGUE_SEASONS = {
-    "NE Portland": ["Season 49", "Season 48", "Season 47"],
-    "Bi-coastal Elites": ["Season 49"],
-}
+    with tab_login:
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Sign in")
+        if submit:
+            user = authenticate_user(username, password)
+            if user:
+                st.session_state.user = user
+                st.success(f"Welcome back, {user['username']}!")
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
 
-st.sidebar.header("Fantasy Survivor")
-def get_paths(league, season):
-    if season == "Season 49":
-        scores = (
-            "data/east/Survivor_49_East.xlsx"
-            if league == "Bi-coastal Elites"
-            else "data/PointsScored_Survivor_49.xlsx"
+    with tab_register:
+        with st.form("register_form"):
+            username = st.text_input("New username")
+            password = st.text_input("New password", type="password")
+            submit = st.form_submit_button("Create account")
+        if submit:
+            ok, msg = register_user(username, password)
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
+
+
+if st.session_state.user is None:
+    login_panel()
+    st.stop()
+
+user = st.session_state.user
+with st.sidebar:
+    st.header(f"👋 {user['username']}")
+    if st.button("Log out"):
+        st.session_state.user = None
+        st.rerun()
+
+user_teams = list_league_season_options_for_user(user["id"])
+if user_teams.empty:
+    st.warning("You do not have a team assigned yet. Ask an admin to link your team, or self-link below.")
+    with st.expander("Link an existing team to your account"):
+        team_df = list_all_teams()
+        team_df["label"] = team_df["season_label"] + " • " + team_df["league_name"] + " • " + team_df["team_name"]
+        choice = st.selectbox("Team", team_df["label"])
+        if st.button("Link this team"):
+            row = team_df[team_df["label"] == choice].iloc[0]
+            ok, msg = assign_team(user["username"], row["league_name"], row["season_label"], row["team_name"])
+            if ok:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+    st.stop()
+
+user_teams["label"] = (
+    user_teams["season_label"] + " • " + user_teams["league_name"] + " • " + user_teams["team_name"]
+)
+selected_label = st.sidebar.selectbox("Select your team", user_teams["label"].tolist())
+selected_team = user_teams[user_teams["label"] == selected_label].iloc[0]
+
+data = build_team_dashboard(int(selected_team["team_id"]))
+meta = data["meta"].iloc[0]
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Team", meta["team_name"])
+col2.metric("Current Week", data["current_week"])
+col3.metric("Total Points", f"{data['total']:.1f}")
+
+st.subheader("Standings")
+standings = data["standings"].copy()
+standings["Rank"] = standings["total_points"].rank(ascending=False, method="min").astype(int)
+standings = standings[["Rank", "team_name", "total_points"]].rename(
+    columns={"team_name": "Team", "total_points": "Points"}
+)
+st.dataframe(standings, use_container_width=True)
+
+weekly = data["weekly"]
+if not weekly.empty:
+    chart_col1, chart_col2 = st.columns(2)
+    with chart_col1:
+        st.subheader("Cumulative Trend")
+        fig = px.line(weekly, x="week_number", y="cumulative_total", markers=True)
+        fig.update_layout(xaxis_title="Week", yaxis_title="Cumulative Points", height=380)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with chart_col2:
+        st.subheader("Weekly Breakdown")
+        melted = weekly.melt(
+            id_vars=["week_number"],
+            value_vars=["player_points", "bonus_points"],
+            var_name="source",
+            value_name="points",
         )
-        images = "data/Player_images_S49_Survivor.xlsx"
-    elif season == "Season 48":
-        scores = "data/PointsScored_Survivor_48.xlsx"
-        images = "data/Player_images_S48_Survivor.xlsx"
-    else:  # 47
-        scores = "data/PointsScored_Survivor_47.xlsx"
-        images = "data/Player_images_S47_Survivor.xlsx"
+        fig2 = px.bar(melted, x="week_number", y="points", color="source", barmode="group")
+        fig2.update_layout(xaxis_title="Week", yaxis_title="Points", height=380)
+        st.plotly_chart(fig2, use_container_width=True)
 
-    point_values = (
-        "data/east/Survivor_49_East.xlsx"
-        if league == "Bi-coastal Elites" and season == "Season 49"
-        else "data/PointValues_Survivor.csv"
-    )
+    with st.expander("Raw weekly scoring data"):
+        st.dataframe(weekly, use_container_width=True)
+else:
+    st.info("No weekly data is available yet for this team.")
 
-    return {"scores": scores, "images": images, "point_values": point_values}
-
-
-# set once; widgets will manage values afterwards
-st.session_state.setdefault("league", "NE Portland")
-st.session_state.setdefault("season", LEAGUE_SEASONS[st.session_state["league"]][0])
-
-# 1) Pick league
-league = st.sidebar.selectbox("League", list(LEAGUE_SEASONS.keys()), key="league")
-
-# 2) Season depends on league
-allowed = LEAGUE_SEASONS[league]
-if st.session_state["season"] not in allowed:
-    st.session_state["season"] = allowed[0]
-
-season = st.sidebar.selectbox("Season", allowed, key="season")
-# Build and store paths now that league/season are set
-paths = get_paths(league, season)
-st.session_state["paths"] = paths
-
-# (Optional) expose for tabs
-st.session_state["selected_league"] = league
-st.session_state["selected_season"] = season
-
-# Create tabs for different sections
-tab1, tab2 , tab3 , tab4, tab5 = st.tabs(["Scoring System",
-                                    "Standings & Rosters",
-                                    'Weekly Question Scores',
-                                    'Individual Player Data',
-                                    'Eliminations by Week'])
-
-
-with tab1:
-    rules_tab()
-with tab2:
-    standings_tab()
-with tab3:
-    weekly_questions_tab()
-with tab4:
-    trends_tab()
-with tab5:
-    eliminations_tab()
-
+st.markdown("---")
+st.caption("Admin scoring updates can be entered through `admin_app.py` and are reflected here automatically.")
